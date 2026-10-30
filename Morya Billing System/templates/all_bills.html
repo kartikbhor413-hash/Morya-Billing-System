@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block title %}All Bills - {{ business_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  .filters-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-dark);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+  .filters-form {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  @media (min-width: 768px) {
+    .filters-form {
+      grid-template-columns: 2fr 1fr 1fr 1fr auto;
+      align-items: flex-end;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+  <div>
+    <h1 style="font-size:1.4rem;font-weight:800;color:var(--text-primary);">All Bills</h1>
+    <p style="font-size:0.85rem;color:var(--text-secondary);">Manage and search all invoices saved in Supabase</p>
+  </div>
+  <a href="{{ url_for('create_bill') }}" class="btn-small-gold" style="padding:10px 18px;font-size:0.9rem;text-decoration:none;">
+    + Create New Bill
+  </a>
+</div>
+
+<!-- Filters Card -->
+<div class="filters-card">
+  <form method="GET" action="{{ url_for('all_bills') }}" class="filters-form">
+    <div class="form-group">
+      <label style="color:var(--text-secondary);font-size:0.8rem;font-weight:600;">Search</label>
+      <input type="text" name="search" class="form-control" placeholder="Invoice # or customer name..." value="{{ search }}">
+    </div>
+
+    <div class="form-group">
+      <label style="color:var(--text-secondary);font-size:0.8rem;font-weight:600;">Payment Status</label>
+      <select name="status" class="form-control">
+        <option value="all" {% if status == 'all' or not status %}selected{% endif %}>All Statuses</option>
+        <option value="Paid" {% if status == 'Paid' %}selected{% endif %}>Paid</option>
+        <option value="Partially Paid" {% if status == 'Partially Paid' %}selected{% endif %}>Partially Paid</option>
+        <option value="Unpaid" {% if status == 'Unpaid' %}selected{% endif %}>Unpaid</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label style="color:var(--text-secondary);font-size:0.8rem;font-weight:600;">From Date</label>
+      <input type="date" name="start_date" class="form-control" value="{{ start_date }}">
+    </div>
+
+    <div class="form-group">
+      <label style="color:var(--text-secondary);font-size:0.8rem;font-weight:600;">To Date</label>
+      <input type="date" name="end_date" class="form-control" value="{{ end_date }}">
+    </div>
+
+    <div style="display:flex;gap:6px;">
+      <button type="submit" class="btn-small-gold" style="height:44px;padding:0 18px;">Filter</button>
+      {% if search or (status and status != 'all') or start_date or end_date %}
+        <a href="{{ url_for('all_bills') }}" class="btn-small-gold" style="height:44px;background:#fff;display:grid;place-items:center;text-decoration:none;">Reset</a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+
+<!-- Bills Table or Empty State (STRICT: NO FAKE DATA) -->
+{% if invoices | length == 0 %}
+  <div class="empty-state-box">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+      <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+      <line x1="16" y1="2" x2="16" y2="6"></line>
+      <line x1="8" y1="2" x2="8" y2="6"></line>
+      <line x1="3" y1="10" x2="21" y2="10"></line>
+    </svg>
+    <h3>No bills found. Create your first bill to get started.</h3>
+    <p>Saved invoices will appear here with instant search and PDF download options.</p>
+    <a href="{{ url_for('create_bill') }}" class="btn-small-gold" style="padding:12px 24px;font-size:0.95rem;text-decoration:none;">
+      Create Your First Bill
+    </a>
+  </div>
+{% else %}
+  <div class="billing-card" style="padding:16px;">
+    <div class="items-table-wrapper" style="border:none;">
+      <table class="billing-table">
+        <thead>
+          <tr>
+            <th>Invoice No</th>
+            <th>Date</th>
+            <th>Customer</th>
+            <th>Subtotal</th>
+            <th>Net Amount</th>
+            <th>Advance</th>
+            <th>Balance</th>
+            <th>Status</th>
+            <th style="text-align:center;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for inv in invoices %}
+            <tr>
+              <td><strong>{{ inv.invoice_number }}</strong></td>
+              <td>{{ inv.invoice_date | format_date }}</td>
+              <td>{{ inv.customer_name }}</td>
+              <td>{{ inv.subtotal | currency }}</td>
+              <td style="font-weight:700;">{{ inv.net_amount | currency }}</td>
+              <td>{{ inv.total_advance | currency }}</td>
+              <td style="color:{% if inv.balance_due > 0 %}#b91c1c{% else %}#15803d{% endif %};font-weight:700;">
+                {{ inv.balance_due | currency }}
+              </td>
+              <td>
+                <span class="badge-status {{ inv.payment_status | lower | replace(' ', '-') }}">
+                  {{ inv.payment_status }}
+                </span>
+              </td>
+              <td style="text-align:center;white-space:nowrap;">
+                <a href="{{ url_for('view_invoice', invoice_id=inv.id) }}" class="btn-small-gold" style="padding:4px 8px;font-size:0.75rem;text-decoration:none;">View</a>
+                <a href="{{ url_for('download_invoice_pdf', invoice_id=inv.id, download='true') }}" class="btn-small-gold" style="padding:4px 8px;font-size:0.75rem;text-decoration:none;background:#fff;" title="Download PDF">PDF</a>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}

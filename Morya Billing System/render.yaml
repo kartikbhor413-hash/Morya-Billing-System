@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: moraya-electric-billing
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
+    envVars:
+      - key: FLASK_SECRET_KEY
+        generateValue: true
+      - key: SUPABASE_URL
+        value: https://cehyxvndblmzdttsfkca.supabase.co
+      - key: SUPABASE_KEY
+        sync: false
+      - key: ADMIN_EMAIL
+        value: admin@moraya.com
+      - key: ADMIN_PASSWORD
+        value: Admin@Moraya2026
+      - key: BUSINESS_NAME
+        value: MORAYA ELECTRIC
+      - key: BUSINESS_TAGLINE
+        value: Electrical & Electronics Solutions
+      - key: BUSINESS_PHONE
+        value: "7083155192, 8625914505"

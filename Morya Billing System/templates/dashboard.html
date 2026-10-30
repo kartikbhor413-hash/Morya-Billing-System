@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - {{ business_name }}{% endblock %}
+
+{% block content %}
+<!-- Welcome Banner -->
+<div class="welcome-banner">
+  <div class="welcome-text">
+    <h2>{{ greeting }}, {{ logged_in_user or 'Admin' }} 👋</h2>
+    <p>Create your bills and manage your business</p>
+  </div>
+  <div class="date-badge">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+    <span>{{ current_date_formatted }}</span>
+  </div>
+</div>
+
+<!-- 4 Dashboard Statistics Cards (Connected directly to DB, 0 when empty) -->
+<div class="stats-grid">
+  <!-- Card 1: Total Bills -->
+  <div class="stat-card">
+    <div class="stat-icon gold">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+    </div>
+    <div class="stat-info">
+      <span class="stat-label">Total Bills</span>
+      <span class="stat-value" id="statTotalBills">{{ stats.total_bills }}</span>
+      <span class="stat-sub">All time invoices</span>
+    </div>
+  </div>
+
+  <!-- Card 2: Today's Bills -->
+  <div class="stat-card">
+    <div class="stat-icon green">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+    </div>
+    <div class="stat-info">
+      <span class="stat-label">Today's Bills</span>
+      <span class="stat-value" id="statTodayBills">{{ stats.today_bills }}</span>
+      <span class="stat-sub">Bills created today</span>
+    </div>
+  </div>
+
+  <!-- Card 3: Total Sales -->
+  <div class="stat-card">
+    <div class="stat-icon blue">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+    </div>
+    <div class="stat-info">
+      <span class="stat-label">Total Sales</span>
+      <span class="stat-value" id="statTotalSales">{{ stats.total_sales | currency }}</span>
+      <span class="stat-sub">From all invoices</span>
+    </div>
+  </div>
+
+  <!-- Card 4: Pending Payments -->
+  <div class="stat-card">
+    <div class="stat-icon purple">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+    </div>
+    <div class="stat-info">
+      <span class="stat-label">Pending Payments</span>
+      <span class="stat-value" id="statPendingPayments">{{ stats.pending_payments | currency }}</span>
+      <span class="stat-sub">Outstanding amount</span>
+    </div>
+  </div>
+</div>
+
+<!-- Primary Action: Generate Bill (Opens official invoice bill sheet) -->
+<a href="{{ url_for('create_bill') }}" class="cta-gold-btn">
+  <div class="cta-left">
+    <div class="cta-icon-box">⚡</div>
+    <div class="cta-title">
+      <span>Generate Bill</span>
+      <span>Make new invoice on official Moraya Electric bill sheet</span>
+    </div>
+  </div>
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+</a>
+
+<!-- Recent Invoices or Clean Zero-State Empty Box -->
+{% if stats.total_bills == 0 %}
+  <div class="empty-state-box">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+      <polyline points="14 2 14 8 20 8"></polyline>
+      <line x1="12" y1="18" x2="12" y2="12"></line>
+      <line x1="9" y1="15" x2="15" y2="15"></line>
+    </svg>
+    <h3>No invoices yet. Create your first bill to get started.</h3>
+    <p>All created invoices, line items, and payments will safely be tracked here.</p>
+    <a href="{{ url_for('create_bill') }}" class="btn-small-gold" style="padding:12px 24px;font-size:0.95rem;text-decoration:none;">
+      Create Your First Bill
+    </a>
+  </div>
+{% else %}
+  <div class="billing-card" style="padding:16px;">
+    <div class="card-header-line">
+      <div class="card-header-title">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+        Recent Invoices
+      </div>
+      <a href="{{ url_for('all_bills') }}" class="btn-small-gold" style="text-decoration:none;">View All Bills →</a>
+    </div>
+
+    <div class="items-table-wrapper" style="border:none;">
+      <table class="billing-table">
+        <thead>
+          <tr>
+            <th>Invoice No</th>
+            <th>Date</th>
+            <th>Customer</th>
+            <th>Net Amount</th>
+            <th>Balance</th>
+            <th>Status</th>
+            <th style="text-align:center;">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for inv in recent_invoices %}
+            <tr>
+              <td><strong>{{ inv.invoice_number }}</strong></td>
+              <td>{{ inv.invoice_date | format_date }}</td>
+              <td>{{ inv.customer_name }}</td>
+              <td>{{ inv.net_amount | currency }}</td>
+              <td style="color:{% if inv.balance_due > 0 %}#b91c1c{% else %}#15803d{% endif %};font-weight:600;">
+                {{ inv.balance_due | currency }}
+              </td>
+              <td>
+                <span class="badge-status {{ inv.payment_status | lower | replace(' ', '-') }}">
+                  {{ inv.payment_status }}
+                </span>
+              </td>
+              <td style="text-align:center;">
+                <a href="{{ url_for('view_invoice', invoice_id=inv.id) }}" class="btn-small-gold" style="padding:4px 8px;font-size:0.75rem;text-decoration:none;">View</a>
+                <a href="{{ url_for('download_invoice_pdf', invoice_id=inv.id) }}" target="_blank" class="btn-small-gold" style="padding:4px 8px;font-size:0.75rem;text-decoration:none;background:#fff;">PDF</a>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endif %}
+
+<!-- Quick Features & Contact Information -->
+<div style="margin-top:24px;background:var(--bg-card);border:1px solid var(--border-dark);border-radius:var(--radius-md);padding:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+  <div>
+    <div style="font-size:0.85rem;color:var(--gold-primary);font-weight:700;">MORAYA ELECTRIC SOLUTIONS</div>
+    <div style="font-size:0.78rem;color:var(--text-secondary);">Support &amp; Inquiries: {{ business_phone }}</div>
+  </div>
+  <div style="display:flex;gap:8px;">
+    <a href="{{ url_for('products') }}" class="btn-small-gold" style="text-decoration:none;">Manage Rates</a>
+    <a href="{{ url_for('customers') }}" class="btn-small-gold" style="text-decoration:none;background:#fff;">Manage Customers</a>
+  </div>
+</div>
+{% endblock %}

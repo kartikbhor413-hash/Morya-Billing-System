@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+
+{% block title %}Products &amp; Services - {{ business_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  .product-row-edit {
+    display: none;
+  }
+  .product-row-edit.active {
+    display: table-row;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+  <div>
+    <h1 style="font-size:1.4rem;font-weight:800;color:var(--text-primary);">Products &amp; Services Catalog</h1>
+    <p style="font-size:0.85rem;color:var(--text-secondary);">Manage electrical services, configure default rates, units, and tax</p>
+  </div>
+  <button type="button" class="btn-small-gold" id="btnOpenNewProductModal" style="padding:10px 18px;font-size:0.9rem;">
+    + Add New Product / Service
+  </button>
+</div>
+
+<!-- Search Bar -->
+<div class="billing-card" style="padding:14px;margin-bottom:16px;">
+  <form method="GET" action="{{ url_for('products') }}" style="display:flex;gap:10px;">
+    <input type="text" name="search" class="form-control" placeholder="Search by service or product name..." value="{{ search }}">
+    <button type="submit" class="btn-small-gold" style="padding:0 20px;">Search</button>
+    {% if search %}
+      <a href="{{ url_for('products') }}" class="btn-small-gold" style="background:#fff;display:grid;place-items:center;text-decoration:none;">Reset</a>
+    {% endif %}
+  </form>
+</div>
+
+<!-- Products Table -->
+<div class="billing-card" style="padding:16px;">
+  <div class="items-table-wrapper" style="border:none;">
+    <table class="billing-table">
+      <thead>
+        <tr>
+          <th>Service / Product Name</th>
+          <th>Category</th>
+          <th style="width:120px;">Default Rate (₹)</th>
+          <th style="width:100px;">Unit</th>
+          <th style="width:80px;">Tax (%)</th>
+          <th style="width:90px;text-align:center;">Status</th>
+          <th style="width:100px;text-align:center;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in products %}
+          <tr id="row-view-{{ p.id }}">
+            <td><strong>{{ p.name }}</strong></td>
+            <td>{{ p.category or 'Service' }}</td>
+            <td style="font-weight:700;">
+              {% if p.default_rate and p.default_rate > 0 %}
+                {{ p.default_rate | currency }}
+              {% else %}
+                <span style="color:#64748b;font-weight:normal;">Not set (₹0.00)</span>
+              {% endif %}
+            </td>
+            <td>{{ p.unit or 'Point' }}</td>
+            <td>{{ p.tax_rate or 0 }}%</td>
+            <td style="text-align:center;">
+              <span class="badge-status {% if p.is_active %}paid{% else %}unpaid{% endif %}">
+                {% if p.is_active %}Active{% else %}Inactive{% endif %}
+              </span>
+            </td>
+            <td style="text-align:center;">
+              <button type="button" class="btn-small-gold" style="padding:4px 8px;font-size:0.75rem;" onclick="startEdit('{{ p.id }}')">Edit</button>
+            </td>
+          </tr>
+
+          <!-- Inline Edit Row -->
+          <tr id="row-edit-{{ p.id }}" class="product-row-edit" style="background:#fefce8;">
+            <td>
+              <input type="text" id="edit-name-{{ p.id }}" value="{{ p.name }}" class="form-control" style="height:34px;">
+            </td>
+            <td>
+              <input type="text" id="edit-cat-{{ p.id }}" value="{{ p.category }}" class="form-control" style="height:34px;">
+            </td>
+            <td>
+              <input type="number" id="edit-rate-{{ p.id }}" value="{{ p.default_rate or 0 }}" min="0" step="any" class="form-control" style="height:34px;">
+            </td>
+            <td>
+              <input type="text" id="edit-unit-{{ p.id }}" value="{{ p.unit }}" class="form-control" style="height:34px;">
+            </td>
+            <td>
+              <input type="number" id="edit-tax-{{ p.id }}" value="{{ p.tax_rate or 0 }}" min="0" max="100" class="form-control" style="height:34px;">
+            </td>
+            <td style="text-align:center;">
+              <select id="edit-active-{{ p.id }}" class="form-control" style="height:34px;padding:0 4px;">
+                <option value="1" {% if p.is_active %}selected{% endif %}>Active</option>
+                <option value="0" {% if not p.is_active %}selected{% endif %}>Inactive</option>
+              </select>
+            </td>
+            <td style="text-align:center;white-space:nowrap;">
+              <button type="button" class="btn-small-gold" style="padding:4px 8px;font-size:0.75rem;" onclick="saveEdit('{{ p.id }}')">Save</button>
+              <button type="button" class="btn-small-gold" style="padding:4px 8px;font-size:0.75rem;background:#fff;" onclick="cancelEdit('{{ p.id }}')">✕</button>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal: Add New Service -->
+<div class="modal-overlay" id="newProdModal">
+  <div class="modal-box">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h3 style="font-size:1.1rem;font-weight:700;">+ Add Service / Product</h3>
+      <button type="button" class="remove-btn" onclick="document.getElementById('newProdModal').classList.remove('active')">✕</button>
+    </div>
+    <div class="form-group" style="margin-bottom:12px;">
+      <label>Item Name <span style="color:#ef4444;">*</span></label>
+      <input type="text" id="npName" class="form-control" placeholder="e.g. Submersible Motor Starter Fitting">
+    </div>
+    <div class="form-group" style="margin-bottom:12px;">
+      <label>Category</label>
+      <input type="text" id="npCat" class="form-control" placeholder="Installation / Repair / Material" value="Electrical Service">
+    </div>
+    <div class="form-group" style="margin-bottom:12px;">
+      <label>Default Rate (₹)</label>
+      <input type="number" id="npRate" class="form-control" placeholder="0.00" value="0.00" min="0" step="any">
+    </div>
+    <div class="form-group" style="margin-bottom:12px;">
+      <label>Unit</label>
+      <input type="text" id="npUnit" class="form-control" placeholder="Point / Job / Unit / Meter" value="Point">
+    </div>
+    <div class="form-group" style="margin-bottom:16px;">
+      <label>Tax Rate (%)</label>
+      <input type="number" id="npTax" class="form-control" placeholder="0" value="0" min="0" max="100">
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button type="button" class="btn-generate" style="height:44px;font-size:0.95rem;" id="btnSubmitNewProduct">Save to Supabase</button>
+      <button type="button" class="btn-secondary" style="height:44px;font-size:0.95rem;" onclick="document.getElementById('newProdModal').classList.remove('active')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  function startEdit(id) {
+    document.getElementById(`row-view-${id}`).style.display = 'none';
+    document.getElementById(`row-edit-${id}`).classList.add('active');
+  }
+  function cancelEdit(id) {
+    document.getElementById(`row-view-${id}`).style.display = 'table-row';
+    document.getElementById(`row-edit-${id}`).classList.remove('active');
+  }
+  async function saveEdit(id) {
+    const name = document.getElementById(`edit-name-${id}`).value.trim();
+    const category = document.getElementById(`edit-cat-${id}`).value.trim();
+    const rate = parseFloat(document.getElementById(`edit-rate-${id}`).value) || 0;
+    const unit = document.getElementById(`edit-unit-${id}`).value.trim();
+    const tax = parseFloat(document.getElementById(`edit-tax-${id}`).value) || 0;
+    const is_active = document.getElementById(`edit-active-${id}`).value === '1';
+
+    if (!name) {
+      alert('Name cannot be empty.');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, name, category, default_rate: rate, unit, tax_rate: tax, is_active })
+      });
+      const data = await res.json();
+      if (data.success) {
+        window.location.reload();
+      } else {
+        alert(data.error || 'Failed to update service.');
+      }
+    } catch (e) {
+      alert('Error updating service: ' + e.message);
+    }
+  }
+
+  // Modal open
+  document.getElementById('btnOpenNewProductModal').addEventListener('click', () => {
+    document.getElementById('newProdModal').classList.add('active');
+  });
+
+  document.getElementById('btnSubmitNewProduct').addEventListener('click', async () => {
+    const name = document.getElementById('npName').value.trim();
+    const category = document.getElementById('npCat').value.trim();
+    const rate = parseFloat(document.getElementById('npRate').value) || 0;
+    const unit = document.getElementById('npUnit').value.trim();
+    const tax = parseFloat(document.getElementById('npTax').value) || 0;
+
+    if (!name) {
+      alert('Service name is required.');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, category, default_rate: rate, unit, tax_rate: tax, is_active: true })
+      });
+      const data = await res.json();
+      if (data.success) {
+        window.location.reload();
+      } else {
+        alert(data.error || 'Failed to create service.');
+      }
+    } catch (e) {
+      alert('Error: ' + e.message);
+    }
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}{{ customer.name }} - Invoices History{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:16px;">
+  <a href="{{ url_for('customers') }}" class="btn-small-gold" style="background:#fff;text-decoration:none;">← Back to Customers</a>
+</div>
+
+<!-- Customer Profile Card -->
+<div class="billing-card" style="padding:20px;margin-bottom:20px;">
+  <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+    <div style="width:56px;height:56px;border-radius:50%;background:var(--gold-primary);color:#14161c;display:grid;place-items:center;font-size:1.5rem;font-weight:800;">
+      {{ customer.name[0] }}
+    </div>
+    <div style="flex:1;">
+      <h2 style="font-size:1.3rem;font-weight:800;color:#0f172a;">{{ customer.name }}</h2>
+      <div style="color:#64748b;font-size:0.9rem;margin-top:2px;">
+        📱 {{ customer.phone }} • 📍 {{ customer.address or 'No address provided' }}
+      </div>
+      {% if customer.notes %}
+        <div style="color:#b45309;font-size:0.82rem;margin-top:4px;">Note: {{ customer.notes }}</div>
+      {% endif %}
+    </div>
+    <a href="{{ url_for('create_bill') }}" class="btn-small-gold" style="padding:10px 18px;text-decoration:none;">
+      + Create Bill for Customer
+    </a>
+  </div>
+</div>
+
+<!-- Customer's Past Invoices -->
+<h3 style="font-size:1.15rem;font-weight:700;color:var(--text-primary);margin-bottom:12px;">Invoice History ({{ invoices | length }})</h3>
+
+{% if invoices | length == 0 %}
+  <div class="empty-state-box">
+    <h3>No invoices yet for this customer.</h3>
+    <p>Generate a bill to see it recorded here.</p>
+    <a href="{{ url_for('create_bill') }}" class="btn-small-gold" style="padding:10px 20px;text-decoration:none;">Create First Bill</a>
+  </div>
+{% else %}
+  <div class="billing-card" style="padding:16px;">
+    <div class="items-table-wrapper" style="border:none;">
+      <table class="billing-table">
+        <thead>
+          <tr>
+            <th>Invoice No</th>
+            <th>Date</th>
+            <th>Net Amount</th>
+            <th>Advance Paid</th>
+            <th>Balance Due</th>
+            <th>Payment Status</th>
+            <th style="text-align:center;">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for inv in invoices %}
+            <tr>
+              <td><strong>{{ inv.invoice_number }}</strong></td>
+              <td>{{ inv.invoice_date | format_date }}</td>
+              <td style="font-weight:700;">{{ inv.net_amount | currency }}</td>
+              <td>{{ inv.total_advance | currency }}</td>
+              <td style="color:{% if inv.balance_due > 0 %}#b91c1c{% else %}#15803d{% endif %};font-weight:700;">
+                {{ inv.balance_due | currency }}
+              </td>
+              <td>
+                <span class="badge-status {{ inv.payment_status | lower | replace(' ', '-') }}">
+                  {{ inv.payment_status }}
+                </span>
+              </td>
+              <td style="text-align:center;">
+                <a href="{{ url_for('view_invoice', invoice_id=inv.id) }}" class="btn-small-gold" style="padding:4px 8px;font-size:0.75rem;text-decoration:none;">View</a>
+                <a href="{{ url_for('download_invoice_pdf', invoice_id=inv.id, download='true') }}" class="btn-small-gold" style="padding:4px 8px;font-size:0.75rem;text-decoration:none;background:#fff;">PDF</a>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}
